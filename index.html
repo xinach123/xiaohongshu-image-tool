@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书图片去重工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header>
+        <nav>
+            <div class="logo">小红书图片去重工具</div>
+            <div class="nav-links">
+                <a href="#" class="active">首页</a>
+                <a href="#" class="help-btn">使用说明</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main>
+        <!-- 上传区域 -->
+        <section class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                <div class="upload-hint">
+                    <i class="upload-icon">📁</i>
+                    <p>点击或拖拽图片到这里上传</p>
+                    <p class="sub-hint">支持jpg、png格式</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 处理选项区域 -->
+        <section class="process-options">
+            <h2>图片处理选项</h2>
+            <div class="options-container">
+                <div class="option-item">
+                    <label>亮度调整</label>
+                    <input type="range" min="-10" max="10" value="0">
+                </div>
+                <div class="option-item">
+                    <label>对比度</label>
+                    <input type="range" min="-10" max="10" value="0">
+                </div>
+                <div class="option-item">
+                    <label>随机水印</label>
+                    <input type="checkbox">
+                </div>
+                <div class="option-item">
+                    <label>像素偏移</label>
+                    <input type="range" min="0" max="5" value="1" id="pixelShift">
+                </div>
+                <div class="option-item">
+                    <label>元数据修改</label>
+                    <input type="checkbox" id="modifyMetadata" checked>
+                </div>
+                <div class="option-item">
+                    <label>随机噪点</label>
+                    <input type="range" min="0" max="10" value="2" id="noiseLevel">
+                </div>
+            </div>
+        </section>
+
+        <!-- 预览区域 -->
+        <section class="preview-section">
+            <div class="preview-container" id="previewContainer">
+                <!-- 预览图片将通过 JS 动态添加 -->
+            </div>
+        </section>
+
+        <!-- 下载按钮 -->
+        <section class="download-section">
+            <button id="downloadBtn" disabled>处理并下载图片</button>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html> 
