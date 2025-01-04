@@ -258,17 +258,25 @@
             
             if (uploadedImages.length === 0) {
                 console.warn('没有可下载的图片');
+                alert('请先上传图片');
                 return;
             }
 
             try {
+                // 显示加载状态
+                const originalText = elements.downloadBtn.textContent;
+                elements.downloadBtn.textContent = '处理中...';
+                elements.downloadBtn.disabled = true;
+                elements.downloadBtn.style.cursor = 'wait';
+
                 // 创建ZIP文件
                 const zip = new JSZip();
                 
                 // 处理每张图片
                 for (let i = 0; i < uploadedImages.length; i++) {
                     const image = uploadedImages[i];
-                    console.log(`处理第 ${i + 1} 张图片用于下载`);
+                    console.log(`处理第 ${i + 1}/${uploadedImages.length} 张图片`);
+                    elements.downloadBtn.textContent = `处理中 ${i + 1}/${uploadedImages.length}...`;
                     
                     try {
                         // 获取处理后的图片数据
@@ -294,6 +302,7 @@
                 
                 // 生成并下载ZIP文件
                 console.log('生成ZIP文件...');
+                elements.downloadBtn.textContent = '打包中...';
                 const content = await zip.generateAsync({type: 'blob'});
                 const downloadUrl = URL.createObjectURL(content);
                 
@@ -306,8 +315,18 @@
                 URL.revokeObjectURL(downloadUrl);
                 
                 console.log('下载完成');
+                elements.downloadBtn.textContent = '下载完成!';
+                setTimeout(() => {
+                    elements.downloadBtn.textContent = originalText;
+                    elements.downloadBtn.disabled = false;
+                    elements.downloadBtn.style.cursor = 'pointer';
+                }, 2000);
             } catch (error) {
                 console.error('下载过程中出错:', error);
+                alert('处理图片时出错，请重试');
+                elements.downloadBtn.textContent = originalText;
+                elements.downloadBtn.disabled = false;
+                elements.downloadBtn.style.cursor = 'pointer';
             }
         });
 
@@ -325,7 +344,7 @@
         });
 
         // 更新预览函数
-        function updatePreviews() {
+        async function updatePreviews() {
             console.log('开始更新预览');
             
             // 验证是否有上传的图片
@@ -343,11 +362,31 @@
 
             console.log(`找到 ${previewItems.length} 个预览元素，处理 ${uploadedImages.length} 张图片`);
 
+            // 添加加载指示器
+            const loadingIndicators = [];
+            previewItems.forEach((img, index) => {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'loading-indicator';
+                loadingDiv.textContent = '处理中...';
+                loadingDiv.style.position = 'absolute';
+                loadingDiv.style.top = '50%';
+                loadingDiv.style.left = '50%';
+                loadingDiv.style.transform = 'translate(-50%, -50%)';
+                loadingDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                loadingDiv.style.color = 'white';
+                loadingDiv.style.padding = '5px 10px';
+                loadingDiv.style.borderRadius = '4px';
+                img.parentElement.style.position = 'relative';
+                img.parentElement.appendChild(loadingDiv);
+                loadingIndicators.push(loadingDiv);
+            });
+
             // 处理每张图片
-            uploadedImages.forEach((image, index) => {
+            for (let index = 0; index < uploadedImages.length; index++) {
+                const image = uploadedImages[index];
                 if (!image || !image.original) {
                     console.error(`第 ${index + 1} 张图片无效`);
-                    return;
+                    continue;
                 }
 
                 try {
@@ -356,14 +395,20 @@
                     
                     if (previewItems[index]) {
                         previewItems[index].src = processedDataUrl;
+                        // 移除加载指示器
+                        loadingIndicators[index]?.remove();
                         console.log(`第 ${index + 1} 张图片预览更新成功`);
                     } else {
                         console.error(`未找到第 ${index + 1} 张图片的预览元素`);
                     }
                 } catch (error) {
                     console.error(`第 ${index + 1} 张图片预览更新失败:`, error);
+                    loadingIndicators[index].textContent = '处理失败';
+                    setTimeout(() => {
+                        loadingIndicators[index]?.remove();
+                    }, 2000);
                 }
-            });
+            }
         }
 
         console.log('初始化完成');
