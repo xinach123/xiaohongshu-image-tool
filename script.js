@@ -208,15 +208,108 @@
                     img.width, 
                     img.height
                 );
+
+                // 应用亮度和对比度调整
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // 应用亮度
+                    data[i] = Math.min(255, Math.max(0, data[i] + options.brightness * 25.5));     // R
+                    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + options.brightness * 25.5)); // G
+                    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + options.brightness * 25.5)); // B
+
+                    // 应用对比度
+                    const factor = (259 * (options.contrast * 5 + 255)) / (255 * (259 - options.contrast * 5));
+                    data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));
+                    data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128));
+                    data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128));
+
+                    // 添加随机噪点
+                    if (options.noiseLevel > 0) {
+                        const noise = (Math.random() - 0.5) * options.noiseLevel;
+                        data[i] = Math.min(255, Math.max(0, data[i] + noise));
+                        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+                        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                // 添加水印
+                if (options.watermark) {
+                    const timestamp = new Date().getTime().toString().slice(-6);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(timestamp, Math.random() * (canvas.width - 50), Math.random() * (canvas.height - 20));
+                }
+
             } catch (error) {
                 console.error('绘制图片失败:', error);
                 throw error;
             }
             
-            // 处理图片...（其余代码保持不变）
-            
             return canvas.toDataURL('image/jpeg', 0.92);
         }
+
+        // 添加下载按钮事件处理
+        elements.downloadBtn.addEventListener('click', async () => {
+            console.log('开始下载处理后的图片');
+            
+            if (uploadedImages.length === 0) {
+                console.warn('没有可下载的图片');
+                return;
+            }
+
+            try {
+                // 创建ZIP文件
+                const zip = new JSZip();
+                
+                // 处理每张图片
+                for (let i = 0; i < uploadedImages.length; i++) {
+                    const image = uploadedImages[i];
+                    console.log(`处理第 ${i + 1} 张图片用于下载`);
+                    
+                    try {
+                        // 获取处理后的图片数据
+                        const processedDataUrl = processImage(image.original);
+                        
+                        // 将Base64数据转换为二进制
+                        const base64Data = processedDataUrl.replace(/^data:image\/jpeg;base64,/, '');
+                        const binaryData = atob(base64Data);
+                        const array = new Uint8Array(binaryData.length);
+                        for (let j = 0; j < binaryData.length; j++) {
+                            array[j] = binaryData.charCodeAt(j);
+                        }
+                        
+                        // 添加到ZIP文件
+                        const filename = `processed_${image.name}`;
+                        zip.file(filename, array);
+                        
+                        console.log(`第 ${i + 1} 张图片已添加到ZIP文件`);
+                    } catch (error) {
+                        console.error(`处理第 ${i + 1} 张图片失败:`, error);
+                    }
+                }
+                
+                // 生成并下载ZIP文件
+                console.log('生成ZIP文件...');
+                const content = await zip.generateAsync({type: 'blob'});
+                const downloadUrl = URL.createObjectURL(content);
+                
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'processed_images.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(downloadUrl);
+                
+                console.log('下载完成');
+            } catch (error) {
+                console.error('下载过程中出错:', error);
+            }
+        });
 
         // 添加事件监听器
         Object.entries(elements.options).forEach(([key, element]) => {
