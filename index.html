@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>小红书图片去重工具</title>
     <link rel="stylesheet" href="styles.css">
+    <base href="/xiaohongshu-image-tool/">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js" defer></script>
+    <script src="script.js" defer></script>
 </head>
 <body>
     <!-- 顶部导航 -->
@@ -38,15 +41,15 @@
             <div class="options-container">
                 <div class="option-item">
                     <label>亮度调整</label>
-                    <input type="range" min="-10" max="10" value="0">
+                    <input type="range" min="-10" max="10" value="0" id="brightness">
                 </div>
                 <div class="option-item">
                     <label>对比度</label>
-                    <input type="range" min="-10" max="10" value="0">
+                    <input type="range" min="-10" max="10" value="0" id="contrast">
                 </div>
                 <div class="option-item">
                     <label>随机水印</label>
-                    <input type="checkbox">
+                    <input type="checkbox" id="watermark">
                 </div>
                 <div class="option-item">
                     <label>像素偏移</label>
@@ -75,7 +78,5 @@
             <button id="downloadBtn" disabled>处理并下载图片</button>
         </section>
     </main>
-
-    <script src="script.js"></script>
 </body>
 </html> 

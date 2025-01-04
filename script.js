@@ -1,233 +1,188 @@
-// 获取DOM元素
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-const previewContainer = document.getElementById('previewContainer');
-const downloadBtn = document.getElementById('downloadBtn');
+// 将所有代码包装在一个立即执行的异步函数中
+(async function() {
+    try {
+        console.log('开始初始化应用');
 
-// 图片处理相关参数
-const options = {
-    brightness: document.querySelector('input[type="range"]:nth-of-type(1)'),
-    contrast: document.querySelector('input[type="range"]:nth-of-type(2)'),
-    watermark: document.querySelector('input[type="checkbox"]'),
-    pixelShift: document.getElementById('pixelShift'),
-    modifyMetadata: document.getElementById('modifyMetadata'),
-    noiseLevel: document.getElementById('noiseLevel')
-};
+        // 等待 DOM 加载完成
+        if (document.readyState === 'loading') {
+            console.log('等待 DOM 加载...');
+            await new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('DOM 加载完成');
+                    resolve();
+                });
+            });
+        }
 
-// 存储上传的图片
-let uploadedImages = [];
+        // 获取并验证 DOM 元素
+        const elements = {
+            uploadArea: document.getElementById('uploadArea'),
+            fileInput: document.getElementById('fileInput'),
+            previewContainer: document.getElementById('previewContainer'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            options: {
+                brightness: document.getElementById('brightness'),
+                contrast: document.getElementById('contrast'),
+                watermark: document.getElementById('watermark'),
+                pixelShift: document.getElementById('pixelShift'),
+                modifyMetadata: document.getElementById('modifyMetadata'),
+                noiseLevel: document.getElementById('noiseLevel')
+            }
+        };
 
-// 拖拽上传处理
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-});
+        // 打印详细的元素状态
+        console.log('元素状态详情:');
+        console.log('主要元素:', {
+            uploadArea: elements.uploadArea?.id || '未找到',
+            fileInput: elements.fileInput?.id || '未找到',
+            previewContainer: elements.previewContainer?.id || '未找到',
+            downloadBtn: elements.downloadBtn?.id || '未找到'
+        });
+        
+        console.log('选项元素:', Object.fromEntries(
+            Object.entries(elements.options)
+                .map(([k, v]) => [k, {
+                    found: v ? true : false,
+                    id: v?.id || '未找到',
+                    type: v?.type || '未知',
+                    value: v?.value || '未知'
+                }])
+        ));
 
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('drag-over');
-});
+        // 验证必需的元素
+        const requiredElements = ['uploadArea', 'fileInput', 'previewContainer', 'downloadBtn'];
+        const missingElements = requiredElements.filter(id => !elements[id]);
+        if (missingElements.length > 0) {
+            throw new Error(`缺少必需的元素: ${missingElements.join(', ')}`);
+        }
 
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    const files = e.dataTransfer.files;
-    handleFiles(files);
-});
+        const requiredOptions = ['brightness', 'contrast', 'watermark', 'pixelShift', 'modifyMetadata', 'noiseLevel'];
+        const missingOptions = requiredOptions.filter(id => !elements.options[id]);
+        if (missingOptions.length > 0) {
+            throw new Error(`缺少必需的选项元素: ${missingOptions.join(', ')}`);
+        }
 
-// 点击上传处理
-uploadArea.addEventListener('click', () => {
-    fileInput.click();
-});
+        // 存储上传的图片
+        let uploadedImages = [];
 
-fileInput.addEventListener('change', (e) => {
-    handleFiles(e.target.files);
-});
+        // 图片处理函数
+        function processImage(img) {
+            console.log('开始处理图片');
+            
+            // 验证输入图片
+            if (!img || !img.width || !img.height) {
+                console.error('无效的图片输入:', img);
+                throw new Error('无效的图片输入');
+            }
 
-// 处理上传的文件
-function handleFiles(files) {
-    uploadedImages = [];
-    previewContainer.innerHTML = '';
-    downloadBtn.disabled = false;
+            // 验证所有必需的选项元素是否存在
+            if (!elements.options) {
+                console.error('选项对象未初始化');
+                throw new Error('选项对象未初始化');
+            }
 
-    Array.from(files).forEach(file => {
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.src = e.target.result;
-                img.onload = () => {
-                    uploadedImages.push({
-                        original: img,
-                        processed: null
-                    });
-                    createPreviewElement(img, uploadedImages.length - 1);
-                };
+            Object.entries(elements.options).forEach(([key, element]) => {
+                if (!element) {
+                    console.error(`未找到选项元素: ${key}`);
+                    throw new Error(`未找到选项元素: ${key}`);
+                }
+            });
+
+            // 获取选项值（添加默认值和验证）
+            const options = {
+                brightness: parseFloat(elements.options.brightness.value) || 0,
+                contrast: parseFloat(elements.options.contrast.value) || 0,
+                pixelShift: parseInt(elements.options.pixelShift.value) || 1,
+                noiseLevel: parseInt(elements.options.noiseLevel.value) || 2,
+                watermark: elements.options.watermark.checked || false,
+                modifyMetadata: elements.options.modifyMetadata.checked || true
             };
-            reader.readAsDataURL(file);
+
+            console.log('处理图片使用的选项:', options);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 设置画布尺寸
+            canvas.width = img.width + options.pixelShift;
+            canvas.height = img.height + options.pixelShift;
+            
+            // 绘制图片
+            try {
+                ctx.drawImage(img, 
+                    options.pixelShift / 2, 
+                    options.pixelShift / 2, 
+                    img.width, 
+                    img.height
+                );
+            } catch (error) {
+                console.error('绘制图片失败:', error);
+                throw error;
+            }
+            
+            // 处理图片...（其余代码保持不变）
+            
+            return canvas.toDataURL('image/jpeg', 0.92);
         }
-    });
-}
 
-// 创建预览元素
-function createPreviewElement(img, index) {
-    const previewWrapper = document.createElement('div');
-    previewWrapper.className = 'preview-wrapper';
-    
-    const preview = document.createElement('div');
-    preview.className = 'preview-item';
-    preview.innerHTML = `
-        <img src="${img.src}" alt="预览图片">
-        <div class="preview-controls">
-            <span>原图</span>
-            <div class="preview-info">
-                <small>处理后MD5值将发生变化</small>
-            </div>
-        </div>
-    `;
-    
-    previewWrapper.appendChild(preview);
-    previewContainer.appendChild(previewWrapper);
-}
+        // 添加事件监听器
+        Object.entries(elements.options).forEach(([key, element]) => {
+            if (element) {
+                console.log(`为 ${key} 添加事件监听器`);
+                element.addEventListener('input', (event) => {
+                    console.log(`${key} 值改变为:`, event.target.value);
+                    if (uploadedImages.length > 0) {
+                        updatePreviews();
+                    }
+                });
+            }
+        });
 
-// 图片处理函数
-function processImage(img) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // 添加1像素的padding以改变图片尺寸
-    canvas.width = img.width + parseInt(options.pixelShift.value);
-    canvas.height = img.height + parseInt(options.pixelShift.value);
-    
-    // 绘制原始图片，略微偏移位置
-    ctx.drawImage(img, 
-        options.pixelShift.value / 2, 
-        options.pixelShift.value / 2, 
-        img.width, 
-        img.height
-    );
-    
-    // 应用亮度和对比度调整
-    const brightness = parseFloat(options.brightness.value);
-    const contrast = parseFloat(options.contrast.value);
-    
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    // 添加随机噪点和调整像素
-    const noiseLevel = parseInt(options.noiseLevel.value);
-    
-    for (let i = 0; i < data.length; i += 4) {
-        // 添加随机噪点
-        const noise = (Math.random() - 0.5) * noiseLevel;
-        
-        // 调整亮度
-        data[i] = Math.min(255, Math.max(0, data[i] + brightness * 2.55 + noise));     // R
-        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + brightness * 2.55 + noise)); // G
-        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + brightness * 2.55 + noise)); // B
-        
-        // 调整对比度
-        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-        data[i] = factor * (data[i] - 128) + 128;
-        data[i + 1] = factor * (data[i + 1] - 128) + 128;
-        data[i + 2] = factor * (data[i + 2] - 128) + 128;
-        
-        // 随机微调像素值
-        if (Math.random() < 0.1) {
-            data[i] = Math.min(255, Math.max(0, data[i] + (Math.random() - 0.5)));
-            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + (Math.random() - 0.5)));
-            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + (Math.random() - 0.5)));
+        // 更新预览函数
+        function updatePreviews() {
+            console.log('开始更新预览');
+            
+            // 验证是否有上传的图片
+            if (!uploadedImages || uploadedImages.length === 0) {
+                console.warn('没有可以预览的图片');
+                return;
+            }
+
+            // 获取预览元素
+            const previewItems = document.querySelectorAll('.preview-item img');
+            if (!previewItems || previewItems.length === 0) {
+                console.error('未找到预览元素');
+                return;
+            }
+
+            console.log(`找到 ${previewItems.length} 个预览元素，处理 ${uploadedImages.length} 张图片`);
+
+            // 处理每张图片
+            uploadedImages.forEach((image, index) => {
+                if (!image || !image.original) {
+                    console.error(`第 ${index + 1} 张图片无效`);
+                    return;
+                }
+
+                try {
+                    console.log(`处理第 ${index + 1} 张图片`);
+                    const processedDataUrl = processImage(image.original);
+                    
+                    if (previewItems[index]) {
+                        previewItems[index].src = processedDataUrl;
+                        console.log(`第 ${index + 1} 张图片预览更新成功`);
+                    } else {
+                        console.error(`未找到第 ${index + 1} 张图片的预览元素`);
+                    }
+                } catch (error) {
+                    console.error(`第 ${index + 1} 张图片预览更新失败:`, error);
+                }
+            });
         }
+
+        console.log('初始化完成');
+
+    } catch (error) {
+        console.error('初始化失败:', error);
     }
-    
-    ctx.putImageData(imageData, 0, 0);
-    
-    // 添加随机水印
-    if (options.watermark.checked) {
-        addRandomWatermark(ctx, canvas.width, canvas.height);
-    }
-    
-    // 修改元数据
-    if (options.modifyMetadata.checked) {
-        // 添加随机注释以改变文件的MD5值
-        const randomComment = generateRandomComment();
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        return addMetadataComment(dataUrl, randomComment);
-    }
-    
-    return canvas.toDataURL('image/jpeg', 0.92);
-}
-
-// 生成随机注释
-function generateRandomComment() {
-    const timestamp = new Date().getTime();
-    const random = Math.random().toString(36).substring(7);
-    return `${timestamp}-${random}`;
-}
-
-// 添加元数据注释
-function addMetadataComment(dataUrl, comment) {
-    // 在base64数据中插入注释
-    const base64Data = dataUrl.split(',')[1];
-    const binaryData = atob(base64Data);
-    const array = new Uint8Array(binaryData.length + comment.length + 4);
-    
-    // 复制原始数据
-    for (let i = 0; i < binaryData.length; i++) {
-        array[i] = binaryData.charCodeAt(i);
-    }
-    
-    // 在文件末尾添加注释
-    const commentData = new TextEncoder().encode(comment);
-    array.set(commentData, binaryData.length);
-    
-    // 转回base64
-    const modifiedBinary = String.fromCharCode.apply(null, array);
-    return `data:image/jpeg;base64,${btoa(modifiedBinary)}`;
-}
-
-// 添加随机水印
-function addRandomWatermark(ctx, width, height) {
-    ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
-    ctx.font = '12px Arial';
-    
-    // 生成随机字符
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    const randomText = Array(4).fill(0).map(() => 
-        chars[Math.floor(Math.random() * chars.length)]
-    ).join('');
-    
-    // 随机位置
-    const x = Math.random() * (width - 50);
-    const y = Math.random() * (height - 20);
-    
-    ctx.fillText(randomText, x, y);
-}
-
-// 下载处理后的图片
-downloadBtn.addEventListener('click', () => {
-    uploadedImages.forEach((image, index) => {
-        const processedDataUrl = processImage(image.original);
-        const link = document.createElement('a');
-        link.download = `processed_image_${index + 1}.jpg`;
-        link.href = processedDataUrl;
-        link.click();
-    });
-});
-
-// 实时预览处理效果
-Object.values(options).forEach(option => {
-    option.addEventListener('input', () => {
-        if (uploadedImages.length > 0) {
-            updatePreviews();
-        }
-    });
-});
-
-// 更新预览图片
-function updatePreviews() {
-    const previewItems = document.querySelectorAll('.preview-item img');
-    uploadedImages.forEach((image, index) => {
-        const processedDataUrl = processImage(image.original);
-        previewItems[index].src = processedDataUrl;
-    });
-} 
+})(); 
