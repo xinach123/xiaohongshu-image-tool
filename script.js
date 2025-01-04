@@ -65,6 +65,99 @@
         // 存储上传的图片
         let uploadedImages = [];
 
+        // 处理文件上传
+        async function handleFiles(files) {
+            console.log(`开始处理 ${files.length} 个文件`);
+            
+            // 清空预览容器
+            elements.previewContainer.innerHTML = '';
+            uploadedImages = [];
+
+            // 处理每个文件
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) {
+                    console.warn(`跳过非图片文件: ${file.name}`);
+                    continue;
+                }
+
+                try {
+                    console.log(`处理文件: ${file.name}`);
+                    
+                    // 创建预览元素
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    const img = document.createElement('img');
+                    previewItem.appendChild(img);
+                    elements.previewContainer.appendChild(previewItem);
+
+                    // 加载图片
+                    const imageUrl = URL.createObjectURL(file);
+                    const loadedImage = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.onerror = reject;
+                        img.src = imageUrl;
+                    });
+
+                    // 存储原始图片
+                    uploadedImages.push({
+                        name: file.name,
+                        original: loadedImage
+                    });
+
+                    // 更新预览
+                    img.src = imageUrl;
+                    
+                    console.log(`文件 ${file.name} 处理完成`);
+                } catch (error) {
+                    console.error(`处理文件 ${file.name} 失败:`, error);
+                }
+            }
+
+            // 更新下载按钮状态
+            elements.downloadBtn.disabled = uploadedImages.length === 0;
+            
+            // 如果有图片，更新预览
+            if (uploadedImages.length > 0) {
+                updatePreviews();
+            }
+        }
+
+        // 设置拖放处理
+        elements.uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            elements.uploadArea.classList.add('dragover');
+        });
+
+        elements.uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            elements.uploadArea.classList.remove('dragover');
+        });
+
+        elements.uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            elements.uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+
+        // 设置点击上传
+        elements.uploadArea.addEventListener('click', () => {
+            elements.fileInput.click();
+        });
+
+        elements.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
         // 图片处理函数
         function processImage(img) {
             console.log('开始处理图片');
